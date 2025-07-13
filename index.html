@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Email Untracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #e8f1f5;
+      color: #333;
+    }
+    #langSelect {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 2px solid #2a607c;
+      font-weight: bold;
+      cursor: pointer;
+      background: white;
+      color: #2a607c;
+    }
+    h1 {
+      text-align: center;
+      color: #2a607c;
+      margin-top: 60px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: bold;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      padding: 10px;
+      border: 1px solid #b0c4d6;
+      border-radius: 8px;
+      resize: vertical;
+      background: #f9fcfe;
+      color: #333;
+      font-family: monospace;
+    }
+    button {
+      background-color: #2a607c;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background-color 0.3s ease;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #3b7d99;
+    }
+    .section {
+      background: #ffffff;
+      padding: 20px;
+      margin-top: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    }
+    pre {
+      background: #f2f7fa;
+      padding: 10px;
+      border-radius: 8px;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+
+  <select id="langSelect" onchange="setLanguage()" aria-label="Select Language">
+    <option value="en">English</option>
+    <option value="ar">العربية</option>
+    <option value="fr">Français</option>
+    <option value="es">Español</option>
+    <option value="de">Deutsch</option>
+  </select>
+
+  <h1 id="title"></h1>
+
+  <div class="section">
+    <label id="inputLabel" for="input"></label>
+    <textarea id="input" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off" placeholder=""></textarea>
+    <button onclick="cleanEmail()" id="cleanButton"></button>
+  </div>
+
+  <div class="section">
+    <label id="outputLabel" for="output"></label>
+    <textarea id="output" readonly></textarea>
+  </div>
+
+  <div class="section">
+    <label id="removedLabel"></label>
+    <pre id="removed"></pre>
+  </div>
+
+  <div class="section">
+    <label id="adviceLabel"></label>
+    <pre id="advice"></pre>
+  </div>
+
+<script>
+  // اللغة الافتراضية حسب المتصفح
+  let defaultLang = navigator.language.slice(0,2).toLowerCase();
+  const supportedLangs = ['en', 'ar', 'fr', 'es', 'de'];
+  let currentLang = supportedLangs.includes(defaultLang) ? defaultLang : 'en';
+
+  const translations = {
+    en: {
+      title: "Email Untracker",
+      inputLabel: "📌 Paste your email content or HTML:",
+      cleanButton: "Clean",
+      outputLabel: "✅ Clean Result:",
+      removedLabel: "⚠️ Removed Tracking Elements:",
+      adviceLabel: "💡 Suggested Advice:",
+      noSpy: "✅ No tracking elements found.",
+      adviceSafe: "✅ This email appears clean and safe. You can reply normally.",
+      adviceLow: "⚠️ Contains a small number of tracking elements (likely marketing). You may ignore or unsubscribe, but replying is generally safe.",
+      adviceHigh: "⚠️ High number of tracking elements detected! It's recommended to avoid replying. Consider deleting or blocking the sender."
+    },
+    ar: {
+      title: "منظف البريد من التتبع",
+      inputLabel: "📌 الصق هنا محتوى البريد أو HTML:",
+      cleanButton: "تنظيف",
+      outputLabel: "✅ النتيجة النظيفة:",
+      removedLabel: "⚠️ العناصر التجسسية التي أزلناها:",
+      adviceLabel: "💡 النصيحة المقترحة:",
+      noSpy: "✅ لم نعثر على عناصر تجسسية.",
+      adviceSafe: "✅ هذا البريد يبدو نظيفًا وآمنًا. يمكنك الرد عليه بشكل طبيعي.",
+      adviceLow: "⚠️ يحتوي على عدد قليل من عناصر التتبع (غالبًا لأغراض تسويقية). يمكنك تجاهله أو إلغاء الاشتراك، والرد عليه آمن بشكل عام.",
+      adviceHigh: "⚠️ يحتوي على عدد كبير من عناصر التتبع! يُفضل عدم الرد عليه، احذف الرسالة أو احظر المرسل."
+    },
+    fr: {
+      title: "Nettoyeur d'Email",
+      inputLabel: "📌 Collez le contenu ou HTML de votre email :",
+      cleanButton: "Nettoyer",
+      outputLabel: "✅ Résultat Nettoyé :",
+      removedLabel: "⚠️ Éléments de Suivi Supprimés :",
+      adviceLabel: "💡 Conseil Suggéré :",
+      noSpy: "✅ Aucun élément de suivi détecté.",
+      adviceSafe: "✅ Cet email semble sûr. Vous pouvez répondre normalement.",
+      adviceLow: "⚠️ Contient quelques éléments de suivi (probablement marketing). Vous pouvez ignorer ou vous désinscrire.",
+      adviceHigh: "⚠️ Grand nombre d'éléments de suivi détectés ! Il est recommandé de ne pas répondre."
+    },
+    es: {
+      title: "Limpiador de Correo",
+      inputLabel: "📌 Pega el contenido o HTML del correo:",
+      cleanButton: "Limpiar",
+      outputLabel: "✅ Resultado Limpio:",
+      removedLabel: "⚠️ Elementos de Rastreo Eliminados:",
+      adviceLabel: "💡 Consejo Sugerido:",
+      noSpy: "✅ No se encontraron elementos de rastreo.",
+      adviceSafe: "✅ Este correo parece seguro. Puedes responder normalmente.",
+      adviceLow: "⚠️ Contiene algunos elementos de rastreo (probablemente marketing). Puedes ignorarlo o darte de baja.",
+      adviceHigh: "⚠️ ¡Alto número de elementos de rastreo detectados! Se recomienda no responder."
+    },
+    de: {
+      title: "Email-Reiniger",
+      inputLabel: "📌 Fügen Sie den Inhalt oder HTML der E-Mail ein:",
+      cleanButton: "Reinigen",
+      outputLabel: "✅ Sauberes Ergebnis:",
+      removedLabel: "⚠️ Entfernte Tracking-Elemente:",
+      adviceLabel: "💡 Vorgeschlagener Rat:",
+      noSpy: "✅ Keine Tracking-Elemente gefunden.",
+      adviceSafe: "✅ Diese E-Mail scheint sicher zu sein. Sie können normal antworten.",
+      adviceLow: "⚠️ Enthält einige Tracking-Elemente (wahrscheinlich Marketing). Ignorieren oder abmelden möglich.",
+      adviceHigh: "⚠️ Hohe Anzahl an Tracking-Elementen erkannt! Antwort wird nicht empfohlen."
+    }
+  };
+
+  // تهيئة اللغة
+  function initLanguage() {
+    const select = document.getElementById('langSelect');
+    select.value = currentLang;
+    updateTexts();
+  }
+
+  function updateTexts() {
+    const t = translations[currentLang];
+    document.getElementById('title').textContent = t.title;
+    document.getElementById('inputLabel').textContent = t.inputLabel;
+    document.getElementById('input').placeholder = t.inputLabel;
+    document.getElementById('cleanButton').textContent = t.cleanButton;
+    document.getElementById('outputLabel').textContent = t.outputLabel;
+    document.getElementById('removedLabel').textContent = t.removedLabel;
+    document.getElementById('adviceLabel').textContent = t.adviceLabel;
+  }
+
+  function setLanguage() {
+    const select = document.getElementById('langSelect');
+    currentLang = select.value;
+    updateTexts();
+    if(document.getElementById('input').value.trim()) {
+      cleanEmail();
+    }
+  }
+
+  function cleanEmail() {
+    const t = translations[currentLang];
+    let html = document.getElementById('input').value;
+    let removedItems = [];
+    let trackingCount = 0;
+
+    // إزالة صور التجسس
+    html = html.replace(/<img[^>]*>/gi, (match) => {
+      const isSpy = /width=['"]?1['"]?|height=['"]?1['"]?/i.test(match);
+      if (isSpy) {
+        const srcMatch = match.match(/src=['"]([^'"]+)['"]/i);
+        removedItems.push((currentLang === 'ar' ? "📸 صورة تجسس: " : "📸 Spy Image: ") + (srcMatch ? srcMatch[1] : "[unknown src]"));
+        trackingCount++;
+        return '';
+      }
+      return match;
+    });
+
+    // إزالة معلمات التتبع
+    html = html.replace(/(\?[^"'>]*)/g, (match) => {
+      let params = match.slice(1).split("&");
+      let cleanParams = [];
+      params.forEach(p => {
+        if (/^(utm_|fbclid|gclid)/i.test(p)) {
+          removedItems.push((currentLang === 'ar' ? "🔗 معلمة تتبع محذوفة: " : "🔗 Tracking Param Removed: ") + p);
+          trackingCount++;
+        } else {
+          cleanParams.push(p);
+        }
+      });
+      return cleanParams.length ? "?" + cleanParams.join("&") : "";
+    });
+
+    document.getElementById('output').value = html;
+    document.getElementById('removed').textContent = removedItems.length ? removedItems.join("\n") : t.noSpy;
+
+    let adviceText = t.adviceSafe;
+    if (trackingCount === 0) adviceText = t.adviceSafe;
+    else if (trackingCount <= 2) adviceText = t.adviceLow;
+    else adviceText = t.adviceHigh;
+
+    document.getElementById('advice').textContent = adviceText;
+  }
+
+  // بدء العمل
+  initLanguage();
+</script>
+
+</body>
+</html>
